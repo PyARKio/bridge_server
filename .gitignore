@@ -1,0 +1,7 @@
+.idea/
+modules/
+.ipynb_checkpoints/
+*.pyc
+Downloads.rar
+Analizer_parts/__pycache__/*.pyc
+Analizer_parts/pyark.io
