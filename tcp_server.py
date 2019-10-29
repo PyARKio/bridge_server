@@ -232,6 +232,9 @@ class Thread4Server(threading.Thread):
         if self.data_callback:
             log.info('data_callback: {}'.format(self.data_callback))
             self.data_callback(string['string'])
+            log.info(string['who'])
+            Thread4Server._send(whom=self.speakThread[string['who']].connection,
+                                what='READY TO NEXT')
             log.info(self.speakThread[string['who']].time)
         else:
             log.debug('from {} response {}'.format(string['who'], string['string']))
@@ -327,10 +330,10 @@ def system_call(response):
 
 if __name__ == '__main__':
     ip_vpn = '10.8.0.5'  # client
-    ip_local = '192.168.1.120'
+    ip_local = '192.168.0.105'
     port = 777
 
-    serverThread = Thread4Server(ip=ip_vpn, _port=port,
+    serverThread = Thread4Server(ip=ip_local, _port=port,
                                  word_for_check_new_acceptance={'request': 'check', 'response': 'check ok'},
                                  data_cb=test_call, sys_cb=system_call,
                                  _run_timer=True)
