@@ -9,6 +9,7 @@ from drivers.log_settings import log
 from drivers.interrupt import Interrupt
 from helpers import Exceptions
 from helpers import checkers
+import AssistantBot
 
 
 __author__ = "PyARKio"
@@ -139,11 +140,12 @@ class Thread4Server(threading.Thread):
             elif self._get_key(response)[0] in self._get_key(self.queue_handlers):
                 self.queue_handlers[self._get_key(response)[0]](response[self._get_key(response)[0]])
 
-    @staticmethod
-    def accept_error_handler(string_err):
+    def accept_error_handler(self, string_err):
         log.error(string_err)
+        self.sys_callback(str(string_err))
 
     def accept_handler(self, value):
+        self.sys_callback(str(value))
         log.info('Connecting to {}'.format(value['address']))
         self.speakThread[value['address']] = Thread4Speak(connection=value['connection'], address=value['address'])
         self.speakThread[value['address']].start()
@@ -160,6 +162,7 @@ class Thread4Server(threading.Thread):
 
     # TESTING IT !!!
     def speak_error_handler(self, string_err):
+        self.sys_callback(str(string_err))
         log.info('{} from {}'.format(string_err['string'], string_err['who']))
         self.speakThread.pop(string_err['who'])
         log.info(self.speakThread)
@@ -232,9 +235,7 @@ class Thread4Server(threading.Thread):
         if self.data_callback:
             log.info('data_callback: {}'.format(self.data_callback))
             self.data_callback(string['string'])
-            log.info(string['who'])
-            Thread4Server._send(whom=self.speakThread[string['who']].connection,
-                                what='READY TO NEXT')
+            Thread4Server._send(whom=self.speakThread[string['who']].connection, what='READY TO NEXT')
             log.info(self.speakThread[string['who']].time)
         else:
             log.debug('from {} response {}'.format(string['who'], string['string']))
@@ -326,14 +327,18 @@ def test_call(response):
 
 def system_call(response):
     log.info(response)
+    AssistantBot.CommonQueue.CQ.put(response, block=False)
 
 
 if __name__ == '__main__':
-    ip_vpn = '10.8.0.5'  # client
+    assistant_start = threading.Thread(target=AssistantBot.on)
+    assistant_start.start()
+
+    ip_vpn = '10.8.0.9'  # client BUG if changed vpn_ip !!!
     ip_local = '192.168.0.105'
     port = 777
 
-    serverThread = Thread4Server(ip=ip_local, _port=port,
+    serverThread = Thread4Server(ip=ip_vpn, _port=port,
                                  word_for_check_new_acceptance={'request': 'check', 'response': 'check ok'},
                                  data_cb=test_call, sys_cb=system_call,
                                  _run_timer=True)
@@ -341,8 +346,9 @@ if __name__ == '__main__':
     serverThread.start()
 
     while True:
-        cmd = input('-> ')
-        CommonQueue.SysCQ.put({'control': cmd})
+        time.sleep(100)
+        # cmd = input('-> ')
+        # CommonQueue.SysCQ.put({'control': cmd})
 
 
 
