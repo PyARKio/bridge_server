@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 import threading
 import time
+from drivers.log_settings import log
 
 
 __author__ = "PyARKio"
@@ -24,6 +25,7 @@ class Interrupt(threading.Thread):
 
     def terminate(self):
         self._running = False
+        log.debug('self._running: {}'.format(self._running))
 
     def go_go(self):
         self._running = True
@@ -34,6 +36,7 @@ class Interrupt(threading.Thread):
             time.sleep(self.__time)
             if not self._pause:
                 self.__handler()
+        log.debug('TIMER STOP !!!')
 
 
 if __name__ == '__main__':

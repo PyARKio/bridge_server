@@ -1,0 +1,9 @@
+[2019-11-29 08:34:53,978] INFO decorators:122:_f: Function: words, Status: OK
+[2019-11-29 08:34:53,978] INFO decorators:111:_f: <function runner at 0x7fa3a7081b70>, args: True
+[2019-11-29 08:34:53,979] INFO decorators:122:_f: Function: runner, Status: OK
+[2019-11-29 08:34:53,979] INFO tcp_server:101:_check_args: GOOD
+[2019-11-29 08:34:53,979] INFO tcp_server:129:_init_tcp_server: server start. ip: 10.8.0.9 port: 777
+[2019-11-29 08:34:53,980] INFO tcp_server:137:run: {'accept error': OSError(9, 'Bad file descriptor')}
+[2019-11-29 08:34:53,980] ERROR tcp_server:145:accept_error_handler: [Errno 9] Bad file descriptor
+[2019-11-29 08:34:53,980] INFO tcp_server:344:system_call: [Errno 9] Bad file descriptor
+

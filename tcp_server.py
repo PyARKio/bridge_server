@@ -10,6 +10,7 @@ from drivers.interrupt import Interrupt
 from helpers import Exceptions
 from helpers import checkers
 import AssistantBot
+from read_mac import get_mac
 
 
 __author__ = "PyARKio"
@@ -50,7 +51,7 @@ class Thread4Server(threading.Thread):
 
         threading.Thread.__init__(self)
 
-        self.flag_run = 0
+        self.flag_run = False
         self.info = dict()
         self.queue_handlers = {'acceptance': self.accept_handler,
                                'accept error': self.accept_error_handler,
@@ -64,7 +65,7 @@ class Thread4Server(threading.Thread):
 
         if _run_timer:
             self.timer = Interrupt(callback_handler=self.callback_for_timer, periodic=1)
-            self.timer.go_go()
+            # self.timer.go_go()
 
     def callback_for_timer(self):
         keys = self.speakThread.keys()
@@ -120,7 +121,8 @@ class Thread4Server(threading.Thread):
             self.sock.bind((self.ip, self.port))
         except Exception as err:
             log.error(err)
-            raise err
+            # raise err
+            return False
         else:
             self.sock.listen(10)
             self.sock.setblocking(False)
@@ -128,6 +130,8 @@ class Thread4Server(threading.Thread):
             log.info('server start. ip: {} port: {}'.format(self.ip, self.port))
             self.acceptThread.sock = self.sock
             self.acceptThread.start()
+            self.timer.go_go()
+            self.flag_run = True
 
     def run(self):
         self._init_tcp_server()
@@ -176,6 +180,18 @@ class Thread4Server(threading.Thread):
     # NOT FINISHED !!!!  ADD CHECKERS AND LOGIC
     def cmd_handler(self, value):
         log.debug(value)
+        self.acceptThread.flag_run = False
+        self.timer.terminate()
+        self.flag_run = False
+
+        log.debug(self.speakThread)
+        for key in list(self.speakThread.keys()):
+            log.debug(self.speakThread[key])
+            self.speakThread[key].flag_run = False
+            self.speakThread[key].close()
+            self.speakThread.pop(key)
+        log.debug(self.speakThread)
+        self.sock.close()  # .shutdown(socket.SHUT_RDWR)
 
     # ******************** CHECK NEW CLIENT ****************************
     def _check_new_client(self, string):
@@ -307,9 +323,10 @@ class Thread4Accept(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.sock = None
+        self.flag_run = True
 
     def run(self):
-        while True:
+        while self.flag_run:
             try:
                 __connection, __address = self.sock.accept()
                 log.info("Connection from: " + str(__address))
@@ -319,6 +336,7 @@ class Thread4Accept(threading.Thread):
                 CommonQueue.CQ.put({'accept error': __err})
             else:
                 CommonQueue.CQ.put({'acceptance': {'connection': __connection, 'address': __address}})
+        log.info('SHUTDOWN')
 
 
 def test_call(response):
@@ -334,21 +352,47 @@ if __name__ == '__main__':
     assistant_start = threading.Thread(target=AssistantBot.on)
     assistant_start.start()
 
-    ip_vpn = '10.8.0.9'  # client BUG if changed vpn_ip !!!
-    ip_local = '192.168.0.105'
-    port = 777
+    start_ip = 0
+    while not start_ip:
+        net_data = get_mac('ifconfig')
+        log.debug(net_data)
 
-    serverThread = Thread4Server(ip=ip_vpn, _port=port,
-                                 word_for_check_new_acceptance={'request': 'check', 'response': 'check ok'},
-                                 data_cb=test_call, sys_cb=system_call,
-                                 _run_timer=True)
-    serverThread.flag_run = 1
-    serverThread.start()
+        if 'VPN' in net_data.keys():
+            start_ip = net_data['VPN']['VPN IP']
 
+            serverThread = Thread4Server(ip=start_ip, _port=777,
+                                         word_for_check_new_acceptance={'request': 'check', 'response': 'check ok'},
+                                         data_cb=test_call, sys_cb=system_call,
+                                         _run_timer=True)
+            serverThread.start()
+        else:
+            time.sleep(3)
+    log.debug('GO TO ANOTHER WHILE !!!')
     while True:
-        time.sleep(100)
+        net_data = get_mac('ifconfig')
+        log.debug(net_data)
+
+        if 'VPN' in net_data.keys():
+            if net_data['VPN']['VPN IP'] != start_ip:
+                log.debug('RESTART SERVER !!!')
+                log.debug(net_data)
+                start_ip = net_data['VPN']['VPN IP']
+
+                CommonQueue.CQ.put({'control': 'shutdown'})
+                while serverThread.is_alive():
+                    time.sleep(2)
+                del(serverThread)
+                # time.sleep(3)
+
+                serverThread = Thread4Server(ip=start_ip, _port=777,
+                                             word_for_check_new_acceptance={'request': 'check', 'response': 'check ok'},
+                                             data_cb=test_call, sys_cb=system_call,
+                                             _run_timer=True)
+                serverThread.start()
+
+        time.sleep(3)
         # cmd = input('-> ')
-        # CommonQueue.SysCQ.put({'control': cmd})
+        # CommonQueue.CQ.put({'control': cmd})
 
 
 
