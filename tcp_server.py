@@ -340,6 +340,7 @@ class Thread4Accept(threading.Thread):
 
 
 def test_call(response):
+    # save in db, for example
     log.info(response)
 
 
